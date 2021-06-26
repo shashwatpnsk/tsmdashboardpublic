@@ -1,9 +1,807 @@
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3C15L6Y4M8"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+---
+title: "तरंग सुपोषित महाराष्ट्राचा Monitoring Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    includes:
+       in_header: GoogleAnalyticsScript.html
+    orientation: rows
+    vertical_layout: fill 
+---
 
-  gtag('config', 'G-3C15L6Y4M8');
-</script>
+
+
+```{r load-packages, include=FALSE}
+.libPaths("/usr/local/lib/R/site-library")
+library(flexdashboard)
+library(tidyverse)
+library(leaflet)
+library(emojifont)
+library(hablar)
+library(DT)
+#library(shiny)
+#library(shinyWidgets)
+```
+
+```{r}
+load("data.RData")
+
+updatewastring <- toString(format(as.POSIXct(updateWADate, tz=Sys.timezone()), "%d-%m-%y %H:%M",tz=Sys.timezone()))
+
+updateivrstring <- toString(format(as.POSIXct(updateIVRDate, tz=Sys.timezone()), "%d-%m-%y %H:%M",tz=Sys.timezone()))
+
+
+```
+
+WhatsApp {data-icon="fa-whatsapp"}
+======================================================================
+
+Valueboxes
+-------------------------
+### Total Users
+```{r}
+valueBox(usrCount,icon = "fa-users", color = "#25D366")
+
+```
+
+### Total Conversations
+```{r}
+valueBox(sessions, icon = "fa-comments", color = "#25D366")
+```
+
+### Total Messages 
+```{r}
+valueBox(n_messages, icon = "fa-comment-dots",color = "#25D366")
+```
+
+### Average Duration of Conversation
+```{r}
+valueBox(time, icon = "fa-clock", color = "#25D366")
+```
+
+Main {.tabset}
+---------------------------------------------------------------------
+
+### Districtwise Reach {data-width=300}
+
+```{r}
+
+title <- paste("Districtwise WhatsApp Chatbot Reach of Tarang Suposhit Maharashtracha. Updated on", updatewastring)
+
+
+dist_count_WA%>%
+  arrange(rank)%>%
+  relocate(rank)%>%
+  rename(District = district, Rank = rank)%>%
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'Bfrti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ),
+                pageLength = 50,
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                rownames= FALSE
+)
+
+```
+
+### Blockwise Reach
+
+```{r}
+
+title <- paste("Blockwise WhatsApp Chatbot Reach of Tarang Suposhit Maharashtracha. Updated on", updatewastring)
+
+block_count_WA%>%
+  arrange(rank)%>%
+  relocate(rank)%>%
+  rename(Block = block, District = district, Rank = rank)%>%
+ # filter(Users >= 50)%>%
+  relocate(District, .after = Rank)%>%
+  relocate(Block, .after = District)%>%
+  hablar::convert(fct(District))%>%
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+```
+
+### Map of WhatsApp Users by District
+
+```{r}
+pal <- colorNumeric(c("#d4334b","#854BDD","#794bdd", "#724BDD","#4B55DD","Dark Blue"), domain = mh_dist$Users_WA)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/><strong>%g</strong> WhatsApp Users<br/>Rank: %g",
+  mh_dist$district, mh_dist$Users_WA, mh_dist$rank_WA
+) %>% lapply(htmltools::HTML)
+
+
+leaflet(mh_dist)%>%
+    addProviderTiles(providers$Esri.WorldGrayCanvas)%>%
+  setMaxBounds(70.731, 23.701, 82.979, 13.425)%>%
+  setView(75.713900, 19.751500, zoom = 6)%>%
+  addPolygons(
+    color = "#333333",
+    fillColor = ~pal(Users_WA),
+    weight = 1, 
+    opacity = 1.0, 
+    fillOpacity = 0.6,
+    highlight = highlightOptions(
+      weight = 2.5,
+      color = "#333333",
+      fillOpacity = 1,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      direction = "auto")
+    )%>%
+  addLegend(pal = pal, 
+            values = ~Users_WA, 
+            opacity = 0.7, 
+            title = "Number of Users",
+            position = "bottomright")
+```
+
+
+IVR Helpline {data-icon="fa-phone"}
+======================================================================
+ValueBoxRow
+-----------------------------------------------------------------------
+
+### Total Callers
+```{r}
+
+valueBox(callers,icon = "fa-users", color = "#8113C8")
+
+```
+
+### Total Calls
+```{r}
+
+valueBox(calls, icon = "fa-phone-volume", color = "#8113C8")
+
+```
+
+### Total Messages Played 
+```{r}
+valueBox(ivr_messages, icon = "fa-play-circle",color = "#8113C8")
+```
+
+
+### Average Duration of Call
+```{r}
+
+
+valueBox(time_ivr, icon = "fa-clock", color = "#8113C8")
+```
+
+
+MainRow {.tabset}
+-----------------------------------------------------------------------
+
+### Districtwise Reach {data-width=300}
+
+```{r}
+
+title <- paste("Districtwise IVR Helpline Reach of Tarang Suposhit Maharashtracha. Updated on", updateivrstring)
+
+dist_count_IVR%>%
+  arrange(rank)%>%
+  arrange(rank)%>%
+  relocate(rank)%>%
+  rename(District = district, Rank = rank)%>%
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'Bfrti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ),
+                pageLength = 50,
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                rownames= FALSE
+)
+
+```
+
+### Blockwise Reach
+
+```{r}
+
+title <- paste("Blockwise IVR Helpline Reach of Tarang Suposhit Maharashtracha. Updated on", updateivrstring)
+
+block_count_IVR%>%
+  arrange(rank)%>%
+  relocate(rank)%>%
+  rename(Block = block, District = district, Rank = rank)%>%
+  filter(Users >= 50)%>%
+  relocate(District, .after = Rank)%>%
+  relocate(Block, .after = District)%>%
+  relocate(Users, .after = Block)%>%
+  hablar::convert(fct(District))%>%
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+
+```
+
+### Map of Callers by District {data-width=500}
+
+```{r}
+pal <- colorNumeric(c("#d4334b","#854BDD","#794bdd", "#724BDD","#4B55DD","Dark Blue"), domain = mh_dist$Users_IVR)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/><strong>%g</strong> Callers<br/>Rank: %g",
+  mh_dist$district, mh_dist$Users_IVR, mh_dist$rank_IVR
+) %>% lapply(htmltools::HTML)
+
+
+leaflet(mh_dist)%>%
+    addProviderTiles(providers$Esri.WorldGrayCanvas)%>%
+  setMaxBounds(70.731, 23.701, 82.979, 13.425)%>%
+  setView(75.713900, 19.751500, zoom = 6)%>%
+  addPolygons(
+    color = "#333333",
+    fillColor = ~pal(Users_IVR),
+    weight = 1, 
+    opacity = 1.0, 
+    fillOpacity = 0.6,
+    highlight = highlightOptions(
+      weight = 2.5,
+      color = "#333333",
+      fillOpacity = 1,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      direction = "auto")
+    )%>%
+  addLegend(pal = pal, 
+            values = ~Users_IVR, 
+            opacity = 0.7, 
+            title = "Number of Callers",
+            position = "bottomright",
+            na.label = "")
+
+
+```
+
+
+AWW Performance {data-icon="fa-female"}
+======================================================================
+ValueBoxRow
+-----------------------------------------------------------------------
+### Number of AWWs using WhatsApp Chatbot
+```{r}
+
+valueBox(sum(wa_dist_awc$tot_awc_user), icon = "fa-whatsapp", color = "#dbac1d")
+
+```
+
+
+### Percentage AWWs using WhatsApp Chatbot
+```{r}
+
+valueBox(paste0(round(mean(wa_dist_awc$perc_awc_user),2),"%"), icon = "fa-whatsapp", color = "#dbac1d")
+
+```
+
+### Number of AWWs calling IVR Helpline
+```{r}
+
+valueBox(sum(ivr_dist_awc$tot_awc_user), icon = "fa-phone", color = "#dbac1d")
+
+```
+
+### Percentage AWWs calling IVR Helpline
+```{r}
+
+valueBox(paste0(round(mean(ivr_dist_awc$perc_awc_user),2),"%"), icon = "fa-phone", color = "#dbac1d")
+
+```
+
+AWW Reach {.tabset}
+-----------------------------------------------------------------------
+### WA District Reach
+
+```{r}
+
+title <- paste("Districtwise AWWs using WhatsApp Chatbot of Tarang Suposhit Maharashtracha. Updated on", updatewastring)
+
+wa_dist_awc%>%
+  mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,`AWWs using WA Chatbot` = tot_awc_user, `Percentage of AWWs using WA Chatbot`= perc_awc_user)%>%
+    arrange(Rank, increasing = T)%>%
+  hablar::convert(fct(District))%>%
+
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'Bfrti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                pageLength = 50,
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                rownames= FALSE
+)
+
+
+```
+
+### WA Block Reach
+
+```{r}
+
+title <- paste("Blockwise AWWs using WhatsApp Chatbot of Tarang Suposhit Maharashtracha. Updated on", updatewastring)
+
+wa_block_awc%>%
+  relocate(District, .before = Block)%>%
+    mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,
+         `AWWs using WA Chatbot` = tot_awc_user, 
+         `Percentage of AWWs using WA Chatbot`= perc_awc_user)%>%
+  arrange(Rank, increasing = T)%>%
+    hablar::convert(fct(District))%>%
+      hablar::convert(fct(Block))%>%
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+
+```
+
+### WA Sector Reach
+
+```{r}
+
+title <- paste("Sectorwise AWWs using WhatsApp Chatbot of Tarang Suposhit Maharashtracha. Updated on", updatewastring)
+
+wa_sector_awc%>%
+    relocate(Block, .before = Supervisor)%>%
+    relocate( District, .before = Block)%>%
+    mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,
+         `AWWs using WA Chatbot` = tot_awc_user, 
+         `Percentage of AWWs using WA Chatbot`= perc_awc_user)%>%
+  arrange(Rank, increasing = T)%>%
+      hablar::convert(fct(District))%>%
+      hablar::convert(fct(Block))%>%
+  hablar::convert(fct(Supervisor))%>%
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+
+```
+
+### IVR District Reach
+
+```{r}
+
+title <- paste("Districtwise AWWs using IVR Helpline of Tarang Suposhit Maharashtracha. Updated on", updateivrstring)
+
+ivr_dist_awc%>%
+ mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,`AWWs using IVR Helpline` = tot_awc_user, `Percentage of AWWs using IVR Helpline`= perc_awc_user)%>%
+    arrange(Rank, increasing = T)%>%
+      hablar::convert(fct(District))%>%
+
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'Bfrti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                pageLength = 50,
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                rownames= FALSE
+)
+```
+
+### IVR Block Reach
+
+```{r}
+
+title <- paste("Blockwise AWWs using IVR Helpline of Tarang Suposhit Maharashtracha. Updated on", updateivrstring)
+
+ivr_block_awc%>%
+  relocate(District, .before = Block)%>%
+    mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,
+         `AWWs using IVR Helpline` = tot_awc_user, 
+         `Percentage of AWWs using IVR Helpline`= perc_awc_user)%>%
+  arrange(Rank, increasing = T)%>%
+      hablar::convert(fct(District))%>%
+      hablar::convert(fct(Block))%>%
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+
+```
+
+### IVR Sector Reach
+
+```{r}
+
+title <- paste("Sectorwise AWWs using IVR Helpline of Tarang Suposhit Maharashtracha. Updated on", updateivrstring)
+
+ivr_sector_awc%>%
+    relocate(Block, .before = Supervisor)%>%
+    relocate( District, .before = Block)%>%
+    mutate(Rank = dense_rank(desc(perc_awc_user)), .before = District,
+         perc_awc_user = round(perc_awc_user,2))%>%
+  rename(`Number of AWWs` = n_awc,
+         `AWWs using IVR Helpline` = tot_awc_user, 
+         `Percentage of AWWs using IVR Helpline`= perc_awc_user)%>%
+  arrange(Rank, increasing = T)%>%
+      hablar::convert(fct(District))%>%
+      hablar::convert(fct(Block))%>%
+  hablar::convert(fct(Supervisor))%>%
+
+
+  DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti',
+                          columnDefs = list(list(className = 'dt-center', targets="_all")),
+                           buttons = list(list(
+                      extend = "print", 
+                      text = "Print", 
+                      title = title
+                    ),
+                    list(
+                      extend = "pdf", 
+                      text = "PDF", 
+                      title = title
+                    ),
+                    list(
+                      extend = "excel", 
+                      text = "Excel", 
+                      title = title
+                    )
+                    ), 
+                autoWidth = TRUE,
+                scrollY = "300px",
+                scrollCollapse = TRUE), 
+                filter = list(
+                            position = 'top', clear = FALSE, plain = TRUE
+                            ), 
+                rownames= FALSE
+)
+
+
+
+```
+
+
+
+```{r}
+# <!-- ### Combined Anganwadi List -->
+# 
+# <!-- -->
+# 
+# <!-- shinyApp( -->
+# <!--   ui = fillPage( -->
+# <!--       inputPanel( -->
+# <!--         selectInput("region", "Region:", choices = c("1","2","3")) -->
+# <!--       ), -->
+# <!--       textOutput("phonePlot") -->
+# <!--     ), -->
+# <!--   server = function(input, output) { -->
+# <!--   out$phonePlot <- print("Number of Telephones") -->
+# 
+# <!--   }, -->
+# <!--   options = list(height = 600) -->
+# <!-- ) -->
+# 
+# 
+# <!-- title <- paste("List of Anganwadis who have used Taran Suposhit platforms") -->
+# 
+# 
+# <!-- # aww_combined%>% -->
+# <!-- #       hablar::convert(fct(District))%>% -->
+# <!-- #       hablar::convert(fct(Block))%>% -->
+# <!-- #       hablar::convert(fct(Supervisor))%>% -->
+# <!-- #  -->
+# <!-- #  -->
+# <!-- #   DT::datatable(extensions = 'Buttons', options = list(dom = 'fBlprti', -->
+# <!-- #                           columnDefs = list(list(className = 'dt-center', targets="_all")), -->
+# <!-- #                            buttons = list(list( -->
+# <!-- #                       extend = "print", -->
+# <!-- #                       text = "Print", -->
+# <!-- #                       title = title -->
+# <!-- #                     ), -->
+# <!-- #                     list( -->
+# <!-- #                       extend = "pdf", -->
+# <!-- #                       text = "PDF", -->
+# <!-- #                       title = title -->
+# <!-- #                     ), -->
+# <!-- #                     list( -->
+# <!-- #                       extend = "excel", -->
+# <!-- #                       text = "Excel", -->
+# <!-- #                       title = title -->
+# <!-- #                     ) -->
+# <!-- #                     ), -->
+# <!-- #                 autoWidth = TRUE, -->
+# <!-- #                 scrollY = "300px", -->
+# <!-- #                 scrollCollapse = TRUE), -->
+# <!-- #                 filter = list( -->
+# <!-- #                             position = 'top', clear = FALSE, plain = TRUE -->
+# <!-- #                             ), -->
+# <!-- #                 rownames= FALSE -->
+# <!-- # ) -->
+# 
+# <!-- ``` -->
+# 
+# 
+# 
+# 
+# 
+# 
+# <!-- Growth Ranking {data-icon="fa-female"} -->
+# <!-- ====================================================================== -->
+# 
+# <!-- **Range of Performance Rankings:** `r paste(increaserange[1], "to", increaserange[2])` -->
+# 
+# <!-- AWW Reach {.tabset} -->
+# <!-- ----------------------------------------------------------------------- -->
+# <!-- ### WA District Performance -->
+# 
+# <!-- ```{r} -->
+# 
+# <!-- title <- paste("Districtwise AWWs using WhatsApp Chatbot of Tarang Suposhit Maharashtracha. Updated on", updatewastring) -->
+# 
+# <!-- dist_count_WA_diff%>% -->
+# <!--   relocate(district, .after = rank)%>% -->
+# <!--   relocate(diff_users, .after = district)%>% -->
+# <!--     rename(Rank = rank,`Increase in Users`= diff_users, District = district)%>% -->
+# <!--     arrange(Rank, increasing = T)%>% -->
+# <!--   hablar::convert(fct(District))%>% -->
+# 
+# <!--   DT::datatable(extensions = 'Buttons', options = list(dom = 'Bfrti', -->
+# <!--                           columnDefs = list(list(className = 'dt-center', targets="_all")), -->
+# <!--                            buttons = list(list( -->
+# <!--                       extend = "print",  -->
+# <!--                       text = "Print",  -->
+# <!--                       title = title -->
+# <!--                     ), -->
+# <!--                     list( -->
+# <!--                       extend = "pdf",  -->
+# <!--                       text = "PDF",  -->
+# <!--                       title = title -->
+# <!--                     ), -->
+# <!--                     list( -->
+# <!--                       extend = "excel",  -->
+# <!--                       text = "Excel",  -->
+# <!--                       title = title -->
+# <!--                     ) -->
+# <!--                     ),  -->
+# <!--                 pageLength = 50, -->
+# <!--                 autoWidth = TRUE, -->
+# <!--                 scrollY = "300px", -->
+# <!--                 scrollCollapse = TRUE),  -->
+# <!--                 rownames= FALSE -->
+# <!-- ) -->
+# 
+# 
+# <!-- ``` -->
+
+```
+  
+Info {data-icon="fa-info"}
+============================================================================
+**About**
+
+This dashboard provides an interface to monitor the reach of Tarang Suposhit Maharashtracha.
+
+Developed and Maintained by Rajmata Jijau Mission Team. 
+
+Incase of any queries please email us at [taskforcewcd@mahnm.in](mailto:taskforcewcd@mahnm.in)
+
+**Location of users:**
+
+ - Location of all users is based on the information entered during the first conversation with the WhatsApp Chatbot. 
+ - Please note that location of all users may not be known due to invalid names or incorrect spellings of blocks and district entered by the users.
+ - We are able to rectify incorrect spellings entered by users if the reach in a block or district is high enough.
+ - AWW report is based on CAS phone numbers being used to call IVR Helpline or chat with WhatsApp Chatbot.
+
+
+**Last Update**:
+
+IVR data updated on `r updateivrstring`.
+
+WhatsApp data updated on `r updatewastring`.
+
+**District and Block Matching**:
+
+Percentage of users mapped to a Block: `r format(perc_blockmatched, digits = 3)`%
+
+Percentage of users mapped to a District: `r format(perc_distmatched, digits = 3)`%
+
+``` Version 3.4```
+
